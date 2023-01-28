@@ -27,12 +27,28 @@ for j in range(iterations):
     for i in range(len(images)):
         layer_0 = images[i:i+1]
         layer_1 = relu(numpy.dot(layer_0, weights_0_1))
+        dropout_mask = numpy.random.randint(2, size=layer_1.shape)
+
+        layer_1 *= dropout_mask * 2
         layer_2 = numpy.dot(layer_1, weights_1_2)
         error += numpy.sum((labels[i:i+1] - layer_2) ** 2)
         correct_cnt += int(numpy.argmax(layer_2) == numpy.argmax(labels[i:i+1]))
         layer_2_delta = (labels[i:i+1] - layer_2)
         layer_1_delta = layer_2_delta.dot(weights_1_2.T) * relu2deriv(layer_1)
+        layer_1_delta *= dropout_mask
         weights_1_2 += alpha * layer_1.T.dot(layer_2_delta)
         weights_0_1 += alpha * layer_0.T.dot(layer_1_delta)
-        sys.stdout.write("\r" + " I:"+str(j) + " Error:" + str(error/float(len(images)))[0:5] +
-                         " Correct:" + str(correct_cnt/float(len(images))))
+
+        if j % 10 == 0:
+            test_error = 0.0
+            test_correct_cnt = 0
+            for k in range(len(test_images)):
+                layer_0 = test_images[k:k + 1]
+                layerl = relu(numpy.dot(layer_0, weights_0_1))
+                layer_2 = numpy.dot(layer_1, weights_1_2)
+                test_error += numpy.sum((test_labels[k:k + 1] - layer_2) ** 2)
+                test_correct_cnt += int(numpy.argmax(layer_2) == numpy.argmax(test_labels[k:k + 1]))
+            sys.stdout.write("\nI:" + str(j) + " Test-Err:" + str(test_error / float(len(test_images)))[0:5] +
+                             " Test-Acc:" + str(test_correct_cnt / float(len(test_images))) +
+                             " Train-Err:" + str(error / float(len(images)))[0:5] +
+                             " Train-Acc:" + str(correct_cnt / float(len(images))))
