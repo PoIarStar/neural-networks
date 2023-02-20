@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 from keras.datasets import mnist
+from basefuncs import tanh, tanh2deriv, softmax
 
 np.random.seed(1)
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
@@ -15,19 +16,6 @@ test_images = x_test.reshape(len(x_test), 28 * 28) / 255
 test_labels = np.zeros((len(y_test), 10))
 for i, j in enumerate(y_test):
     test_labels[i][j] = 1
-
-
-def tanh(x):
-    return np.tanh(x)
-
-
-def tanh2deriv(output):
-    return 1 - (output ** 2)
-
-
-def softmax(x):
-    temp = np.exp(x)
-    return temp / np.sum(temp, axis=1, keepdims=True)
 
 
 alpha, iterations = 2, 300
