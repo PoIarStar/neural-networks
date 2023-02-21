@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+import json
 from keras.datasets import mnist
 from basefuncs import tanh, tanh2deriv, softmax
 
@@ -16,7 +17,6 @@ test_images = x_test.reshape(len(x_test), 28 * 28) / 255
 test_labels = np.zeros((len(y_test), 10))
 for i, j in enumerate(y_test):
     test_labels[i][j] = 1
-
 
 alpha, iterations = 2, 300
 pixels_per_image, num_labels = 784, 10
@@ -70,8 +70,7 @@ for j in range(iterations):
 
         for k in range(batch_size):
             labelset = labels[batch_start + k:batch_start + k + 1]
-            _inc = int(np.argmax(layer_2[k:k + 1]) ==
-                       np.argmax(labelset))
+            _inc = int(np.argmax(layer_2[k:k + 1]) == np.argmax(labelset))
             correct_cnt += _inc
 
         layer_2_delta = (labels[batch_start:batch_end] - layer_2) / (batch_size * layer_2.shape[0])
@@ -83,31 +82,47 @@ for j in range(iterations):
         kernels -= alpha * k_update
 
     test_correct_cnt = 0
-
-    for i in range(len(test_images)):
-        layer_0 = test_images[i:i + 1]
-        layer_0 = layer_0.reshape(layer_0.shape[0], 28, 28)
-        layer_0.shape
-
-        sects = list()
-        for row_start in range(layer_0.shape[1] - kernel_rows):
-            for col_start in range(layer_0.shape[2] - kernel_cols):
-                sect = get_image_section(layer_0,
-                                         row_start,
-                                         row_start + kernel_rows,
-                                         col_start,
-                                         col_start + kernel_cols)
-                sects.append(sect)
-
-        expanded_input = np.concatenate(sects, axis=1)
-        es = expanded_input.shape
-        flattened_input = expanded_input.reshape(es[0] * es[1], -1)
-        kernel_output = flattened_input.dot(kernels)
-        layer_1 = tanh(kernel_output.reshape(es[0], -1))
-        layer_2 = np.dot(layer_1, weights_1_2)
-        test_correct_cnt += int(np.argmax(layer_2) == np.argmax(test_labels[i:i + 1]))
     if j % 10 == 0:
+
+        for i in range(len(test_images)):
+            layer_0 = test_images[i:i + 1]
+            layer_0 = layer_0.reshape(layer_0.shape[0], 28, 28)
+            layer_0.shape
+
+            sects = list()
+            for row_start in range(layer_0.shape[1] - kernel_rows):
+                for col_start in range(layer_0.shape[2] - kernel_cols):
+                    sect = get_image_section(layer_0,
+                                             row_start,
+                                             row_start + kernel_rows,
+                                             col_start,
+                                             col_start + kernel_cols)
+                    sects.append(sect)
+                    print(sect)
+                    quit()
+
+            expanded_input = np.concatenate(sects, axis=1)
+            print(expanded_input)
+            quit()
+            es = expanded_input.shape
+            flattened_input = expanded_input.reshape(es[0] * es[1], -1)
+            kernel_output = flattened_input.dot(kernels)
+            layer_1 = tanh(kernel_output.reshape(es[0], -1))
+            layer_2 = np.dot(layer_1, weights_1_2)
+            test_correct_cnt += int(np.argmax(layer_2) == np.argmax(test_labels[i:i + 1]))
+
         sys.stdout.write("\n" +
                          "I:" + str(j) +
                          " Test-Acc:" + str(test_correct_cnt / float(len(test_images))) +
                          " Train-Acc:" + str(correct_cnt / float(len(images))))
+
+        with open('weights.json') as file:
+            weights = json.load(file)
+
+        if test_correct_cnt / len(test_images) > weights['convolutional']['accuracy']:
+            weights['convolutional']['kernels'] = kernels.tolist()
+            weights['convolutional']['weights_1_2'] = weights_1_2.tolist()
+            weights['convolutional']['accuracy'] = test_correct_cnt / len(test_images)
+
+        with open('weights.json', 'w') as file:
+            json.dump(weights, file)
